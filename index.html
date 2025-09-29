@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Dynamic Text Template Generator - Dark Mode</title>
+    <style>
+        /* Dark Mode Base Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background-color: #2c2c2c; /* Dark background */
+            color: #e0e0e0; /* Light text */
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #3c3c3c; /* Darker container */
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #bb86fc; /* Accent color for heading */
+            text-align: center;
+            border-bottom: 2px solid #505050; /* Darker divider */
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .section-header {
+            color: #90caf9; /* Lighter blue for section headers */
+            font-size: 1.2em;
+            margin: 20px 0 10px;
+            padding-left: 10px;
+            border-left: 5px solid #90caf9; /* Accent border */
+            font-weight: 600; /* Added for better emphasis */
+        }
+        p {
+            color: #b0b0b0; /* Slightly lighter body text */
+        }
+
+        /* Input and Textarea Styles */
+        #template-input, #output-textarea, 
+        .field-card input[type="text"], 
+        .field-card input[type="number"], 
+        .field-card select {
+            width: 100%; /* Ensure inputs fill space where needed */
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #626262; /* Darker border */
+            border-radius: 6px;
+            box-sizing: border-box;
+            resize: vertical;
+            font-size: 1em;
+            background-color: #4a4a4a; /* Dark input background */
+            color: #e0e0e0; /* Light input text */
+        }
+        #template-input {
+            min-height: 120px;
+        }
+        #output-textarea {
+            min-height: 180px;
+            background-color: #212121; /* Even darker output background */
+            font-family: monospace;
+            white-space: pre-wrap;
+            border: 2px solid #6d6d6d;
+        }
+        /* Specific override for inputs within field cards to remove default margin-bottom */
+        .field-card input[type="text"], 
+        .field-card input[type="number"], 
+        .field-card select {
+            margin-bottom: 0; 
+        }
+
+        /* Field Settings Area */
+        #field-settings {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 10px 0;
+        }
+        .field-card {
+            padding: 15px;
+            border: 1px solid #64b5f6; /* Lighter blue border for cards */
+            border-radius: 6px;
+            background-color: #424242; /* Slightly lighter dark background for cards */
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .field-card label {
+            font-weight: 600;
+            color: #a7d9ff; /* Light blue for card labels */
+            flex-basis: 100%;
+            margin-bottom: 5px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+            flex-grow: 1; /* Allow input groups to grow */
+        }
+        .input-group span {
+            font-size: 0.8em;
+            color: #b0b0b0; /* Light gray for hints */
+            margin-bottom: 3px;
+        }
+        
+        .converter-display {
+            padding: 5px 10px;
+            background-color: #6200ee; /* Purple accent for converted value */
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 80px; /* Ensure it has enough space */
+        }
+
+        /* Checkbox styling adjustments for dark mode */
+        .input-group input[type="checkbox"] {
+            width: auto; /* Revert width for checkboxes */
+            margin-top: 5px; /* Add some spacing */
+            margin-bottom: 0;
+            padding: 0;
+            border: 1px solid #90caf9;
+            background-color: #4a4a4a;
+        }
+        
+        /* Flex adjustments for conversion block to prevent wrapping too early */
+        #field-settings > .field-card > div:nth-child(5) { /* Targeting the conversion block specifically */
+            flex-wrap: wrap; /* Allow wrapping if space is tight */
+            flex-grow: 2; /* Allow it to take more space */
+        }
+        #field-settings > .field-card > div:nth-child(5) .input-group {
+            min-width: 120px; /* Smaller min-width for units in conversion block */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🌪️ Dynamic Template Generator</h1>
+
+        <div class="section-header">1. Define Your Template (Use **\_\_** for editable fields)</div>
+        <textarea id="template-input" placeholder="Enter your template here. Example:&#10;Tropical Storm Andaya Advisory #__&#10;Strength: __ knots (Convert to kph) kph&#10;Pressure: __ hPa&#10;Direction: __">
+Tropical Storm Andaya Advisory #__
+Strength: __ knots (Convert to kph) kph
+Pressure: __ hPa
+Direction: __
+        </textarea>
+        
+        <div class="section-header">2. Field Settings and Inputs</div>
+        <p style="font-size: 0.9em;">
+            Configure field names, input values, and set up conversions.
+        </p>
+        <div id="field-settings">
+            </div>
+
+        <div class="section-header">3. Generated Text</div>
+        <textarea id="output-textarea" readonly></textarea>
+
+    </div>
+
+    <script>
+        const TEMPLATE_DELIMITER = '__'; // Double underscore for a field
+        
+        // Conversion factors (to/from a base unit, e.g., MPH)
+        const CONVERSION_FACTORS = {
+            'mph': 1.0,               // Base unit: Miles per hour
+            'kph': 1.60934,           // 1 mph = 1.60934 kph
+            'knots': 0.868976,        // 1 mph = 0.868976 knots
+        };
+
+        const templateInput = document.getElementById('template-input');
+        const fieldSettingsDiv = document.getElementById('field-settings');
+        const outputTextarea = document.getElementById('output-textarea');
+
+        // Global array to store field metadata (Name, Value, Conversion Settings)
+        let fields = [];
+
+        // --- CORE CONVERSION LOGIC ---
+        function convertSpeed(value, fromUnit, toUnit) {
+            value = parseFloat(value);
+            if (isNaN(value) || value === 0) return 0;
+            
+            fromUnit = fromUnit.toLowerCase();
+            toUnit = toUnit.toLowerCase();
+
+            if (!CONVERSION_FACTORS[fromUnit] || !CONVERSION_FACTORS[toUnit]) {
+                console.error("Unknown unit encountered during conversion.");
+                return value; // Return original value if units are invalid
+            }
+
+            // 1. Convert value to the base unit (MPH)
+            let baseValue = value / CONVERSION_FACTORS[fromUnit];
+            
+            // 2. Convert from base unit (MPH) to the target unit
+            let convertedValue = baseValue * CONVERSION_FACTORS[toUnit];
+            
+            return convertedValue.toFixed(1); // Return to one decimal place
+        }
+
+        // --- 1. FIELD GENERATION ---
+        function generateFieldCards() {
+            const template = templateInput.value;
+            const matches = template.match(new RegExp(TEMPLATE_DELIMITER, 'g'));
+            const fieldCount = matches ? matches.length : 0;
+            
+            let newFields = [];
+            
+            for (let i = 0; i < fieldCount; i++) {
+                // If a field already exists, keep its previous settings
+                let existingField = fields[i];
+                if (existingField) {
+                    newFields.push(existingField);
+                    continue;
+                }
+
+                // Default settings for new fields
+                newFields.push({
+                    id: `field-${i}`,
+                    name: `Field ${i + 1}`,
+                    value: '',
+                    isConverter: false,
+                    fromUnit: 'knots', // Default from unit
+                    toUnit: 'kph',     // Default to unit
+                    conversionText: '', // The static text in the template to replace
+                });
+            }
+
+            fields = newFields;
+            renderFieldSettings();
+            updateOutput(); // Refresh output
+        }
+
+        // --- 2. FIELD RENDERING ---
+        function renderFieldSettings() {
+            let html = '';
+            
+            fields.forEach((field, index) => {
+                const isConverterChecked = field.isConverter ? 'checked' : '';
+                const conversionBlockStyle = field.isConverter ? 'style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;"' : 'style="display: none;"';
+
+                html += `
+                    <div class="field-card" data-index="${index}">
+                        <label>Configuration for Placeholder ${index + 1}:</label>
+                        
+                        <div class="input-group">
+                            <span>Field Name</span>
+                            <input type="text" id="${field.id}-name" value="${field.name}" 
+                                oninput="updateFieldName(${index}, this.value)">
+                        </div>
+
+                        <div class="input-group">
+                            <span>Input Value</span>
+                            <input type="${field.isConverter ? 'number' : 'text'}" id="${field.id}-value" value="${field.value}" 
+                                oninput="updateFieldValue(${index}, this.value)">
+                        </div>
+
+                        <div class="input-group">
+                            <span>Converter?</span>
+                            <input type="checkbox" id="${field.id}-converter" ${isConverterChecked} 
+                                onchange="toggleConverter(${index}, this.checked)">
+                        </div>
+
+                        <div id="${field.id}-conversion-block" ${conversionBlockStyle}>
+                            <div class="input-group">
+                                <span>Input Unit (e.g., knots)</span>
+                                <select id="${field.id}-from-unit" onchange="updateConversionSettings(${index})">
+                                    ${Object.keys(CONVERSION_FACTORS).map(unit => 
+                                        `<option value="${unit}" ${field.fromUnit === unit ? 'selected' : ''}>${unit.toUpperCase()}</option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+
+                            <div class="input-group">
+                                <span>Target Unit (e.g., kph)</span>
+                                <select id="${field.id}-to-unit" onchange="updateConversionSettings(${index})">
+                                    ${Object.keys(CONVERSION_FACTORS).map(unit => 
+                                        `<option value="${unit}" ${field.toUnit === unit ? 'selected' : ''}>${unit.toUpperCase()}</option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+                            
+                            <div class="input-group">
+                                <span>Text to Replace (e.g., (Convert to kph))</span>
+                                <input type="text" id="${field.id}-text" value="${field.conversionText}" 
+                                    oninput="updateConversionSettings(${index})">
+                            </div>
+
+                            <div class="converter-display" id="${field.id}-converted-output">
+                                ${field.isConverter ? (convertSpeed(field.value, field.fromUnit, field.toUnit) + ' ' + field.toUnit.toUpperCase()) : ('0.0 ' + field.toUnit.toUpperCase())}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            fieldSettingsDiv.innerHTML = html;
+        }
+
+        // --- 3. FIELD DATA HANDLERS ---
+        function updateFieldName(index, name) {
+            fields[index].name = name;
+            // Update the label directly without full re-render for efficiency
+            const card = document.querySelector(`.field-card[data-index="${index}"]`);
+            if (card) {
+                card.querySelector('label').textContent = `Configuration for Placeholder ${index + 1}: ${name}`;
+            }
+        }
+        
+        function updateFieldValue(index, value) {
+            fields[index].value = value;
+            updateOutput();
+        }
+
+        function toggleConverter(index, isChecked) {
+            fields[index].isConverter = isChecked;
+            // Re-render to show/hide conversion settings and change input type
+            renderFieldSettings(); 
+        }
+
+        function updateConversionSettings(index) {
+            const field = fields[index];
+            const card = document.querySelector(`.field-card[data-index="${index}"]`);
+            
+            if (card) {
+                field.fromUnit = card.querySelector(`#${field.id}-from-unit`).value;
+                field.toUnit = card.querySelector(`#${field.id}-to-unit`).value;
+                field.conversionText = card.querySelector(`#${field.id}-text`).value;
+            }
+            updateOutput();
+        }
+
+
+        // --- 4. TEMPLATE PROCESSING AND OUTPUT ---
+        function updateOutput() {
+            let template = templateInput.value;
+            let finalOutput = template; // Start with the full template
+
+            // Iterate over fields in reverse order to avoid issues with replaceAll and overlapping delimiters
+            // This is a common pattern when dealing with multiple string replacements of the same substring
+            let currentTemplateParts = finalOutput.split(TEMPLATE_DELIMITER);
+            let outputParts = [];
+
+            // Process each part and insert the corresponding field value
+            for (let i = 0; i < currentTemplateParts.length; i++) {
+                outputParts.push(currentTemplateParts[i]);
+                if (i < fields.length) {
+                    outputParts.push(fields[i].value);
+                }
+            }
+            finalOutput = outputParts.join('');
+
+
+            // Now handle conversions within the constructed string
+            fields.forEach(field => {
+                if (field.isConverter) {
+                    const convertedValue = convertSpeed(field.value, field.fromUnit, field.toUnit);
+
+                    // Update the display in the GUI for the converter field
+                    const converterDisplay = document.getElementById(`${field.id}-converted-output`);
+                    if (converterDisplay) {
+                        converterDisplay.textContent = `${convertedValue} ${field.toUnit.toUpperCase()}`;
+                    }
+
+                    // Replace the specified conversion text in the finalOutput string
+                    if (field.conversionText && finalOutput.includes(field.conversionText)) {
+                        finalOutput = finalOutput.replace(field.conversionText, convertedValue);
+                    }
+                }
+            });
+
+            // Set the final text to the output area
+            outputTextarea.value = finalOutput;
+        }
+
+        // --- INITIALIZATION ---
+        templateInput.addEventListener('input', generateFieldCards);
+        window.addEventListener('load', generateFieldCards); // Initial generation on page load
+    </script>
+
+</body>
+</html>
