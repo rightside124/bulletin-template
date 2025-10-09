@@ -3,76 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Dynamic Text Template Generator - Dark Mode</title>
+    <title>Advanced Dynamic Text Template Generator - Resizing Fixed</title>
     <style>
-        /* Dark Mode Base Styles */
+        /* CSS Variables for Font Customization */
+        :root {
+            --site-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --monospace-font: Consolas, 'Fira Code', monospace;
+        }
+
+        /* --- Global Styles --- */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--site-font); 
             padding: 20px;
-            background-color: #2c2c2c; /* Dark background */
-            color: #e0e0e0; /* Light text */
+            background-color: #2c2c2c;
+            color: #e0e0e0;
         }
         .container {
-            max-width: 900px;
+            width: 90%; 
+            max-width: 1000px;
             margin: 0 auto;
-            background: #3c3c3c; /* Darker container */
+            background: #3c3c3c;
             padding: 25px;
             border-radius: 10px;
             box-shadow: 0 6px 15px rgba(0,0,0,0.3);
         }
         h1 {
-            color: #bb86fc; /* Accent color for heading */
+            color: #bb86fc;
             text-align: center;
-            border-bottom: 2px solid #505050; /* Darker divider */
+            border-bottom: 2px solid #505050;
             padding-bottom: 10px;
             margin-bottom: 20px;
         }
         .section-header {
-            color: #90caf9; /* Lighter blue for section headers */
+            color: #90caf9;
             font-size: 1.2em;
             margin: 20px 0 10px;
             padding-left: 10px;
-            border-left: 5px solid #90caf9; /* Accent border */
-            font-weight: 600; /* Added for better emphasis */
+            border-left: 5px solid #90caf9;
+            font-weight: 600; 
         }
         p {
-            color: #b0b0b0; /* Slightly lighter body text */
+            color: #b0b0b0;
         }
 
-        /* Input and Textarea Styles */
+        /* --- Input and Textarea Base Styles --- */
         #template-input, #output-textarea, 
-        .field-card input[type="text"], 
+        .field-card textarea, /* Target new textarea fields */
         .field-card input[type="number"], 
-        .field-card select {
-            width: 100%; /* Ensure inputs fill space where needed */
+        .field-card select, 
+        #custom-font-url, #custom-font-name {
+            /* General input/textarea styles */
+            width: 100%; 
             padding: 12px;
             margin-bottom: 15px;
-            border: 1px solid #626262; /* Darker border */
+            border: 1px solid #626262;
             border-radius: 6px;
-            box-sizing: border-box;
-            resize: vertical;
+            box-sizing: border-box; /* Crucial for sizing control */
             font-size: 1em;
-            background-color: #4a4a4a; /* Dark input background */
-            color: #e0e0e0; /* Light input text */
+            background-color: #4a4a4a;
+            color: #e0e0e0;
+            min-height: 40px;
+            font-family: var(--site-font);
         }
+        
+        /* >>> CRITICAL FIX: Make ALL editable text boxes fully resizable <<< */
+        #template-input, 
+        #output-textarea, 
+        #custom-font-url,
+        #custom-font-name,
+        /* Applying resize property to the new resizable-textarea class */
+        .resizable-textarea { 
+            resize: both !important; 
+            overflow: auto !important; 
+            max-width: 100%;
+            /* Explicitly setting width to 100% and letting resize override it */
+            width: 100%; 
+            min-height: 40px; 
+            box-sizing: border-box; /* Ensure borders don't break resizing */
+            min-width: 100px; /* Added base width to ensure horizontal handle appears */
+        }
+        
+        /* Target number inputs (if they exist) to remove resizing */
+        .field-card input[type="number"] {
+            resize: none !important;
+        }
+        
         #template-input {
             min-height: 120px;
         }
+        
         #output-textarea {
             min-height: 180px;
-            background-color: #212121; /* Even darker output background */
-            font-family: monospace;
+            background-color: #212121;
+            font-family: var(--site-font); 
             white-space: pre-wrap;
             border: 2px solid #6d6d6d;
         }
-        /* Specific override for inputs within field cards to remove default margin-bottom */
-        .field-card input[type="text"], 
-        .field-card input[type="number"], 
-        .field-card select {
-            margin-bottom: 0; 
+
+        /* Disable resizing on elements that shouldn't be resized */
+        .field-card select, 
+        .input-group input[type="checkbox"],
+        #font-selector {
+            resize: none !important;
         }
 
-        /* Field Settings Area */
+
+        /* --- Field Settings Area (Layout Styles) --- */
         #field-settings {
             display: flex;
             flex-direction: column;
@@ -81,60 +117,120 @@
         }
         .field-card {
             padding: 15px;
-            border: 1px solid #64b5f6; /* Lighter blue border for cards */
+            border: 1px solid #64b5f6;
             border-radius: 6px;
-            background-color: #424242; /* Slightly lighter dark background for cards */
+            background-color: #424242;
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            align-items: center;
+            align-items: flex-start;
         }
-        .field-card label {
+        .field-card > label {
             font-weight: 600;
-            color: #a7d9ff; /* Light blue for card labels */
+            color: #a7d9ff;
             flex-basis: 100%;
             margin-bottom: 5px;
         }
         
+        /* Styles for the new Field Name and Input Value groups */
+        .field-name-group, .input-value-group {
+            display: flex;
+            flex-direction: column;
+            flex-basis: 100%; 
+            
+            /* CRITICAL FLEX FIX: min-width: 0 allows the textarea child to fully control its width and resize */
+            min-width: 0; 
+            overflow: visible; /* Ensures the resize handle isn't clipped */
+            flex-grow: 1; /* Allow them to grow equally */
+        }
+        
+        @media (min-width: 600px) {
+            .field-name-group, .input-value-group {
+                /* Made width a bit looser to prevent restriction */
+                flex-basis: calc(50% - 5px); 
+            }
+        }
+        
+        .field-label {
+            display: block;
+            font-size: 0.8em;
+            color: #b0b0b0;
+            margin-bottom: 3px;
+            width: 100%;
+        }
+
+        /* Other controls group */
         .input-group {
             display: flex;
             flex-direction: column;
             min-width: 150px;
-            flex-grow: 1; /* Allow input groups to grow */
+            flex-grow: 1;
+            min-width: auto; 
+            max-width: none;
         }
         .input-group span {
             font-size: 0.8em;
-            color: #b0b0b0; /* Light gray for hints */
+            color: #b0b0b0;
             margin-bottom: 3px;
         }
         
         .converter-display {
             padding: 5px 10px;
-            background-color: #6200ee; /* Purple accent for converted value */
+            background-color: #6200ee;
             color: white;
             border-radius: 4px;
             font-weight: bold;
             text-align: center;
-            min-width: 80px; /* Ensure it has enough space */
+            min-width: 80px;
+            align-self: flex-end; /* Align the converted output to the bottom */
+            margin-bottom: 15px;
         }
 
-        /* Checkbox styling adjustments for dark mode */
         .input-group input[type="checkbox"] {
-            width: auto; /* Revert width for checkboxes */
-            margin-top: 5px; /* Add some spacing */
+            width: auto;
+            margin-top: 5px;
             margin-bottom: 0;
             padding: 0;
             border: 1px solid #90caf9;
             background-color: #4a4a4a;
         }
         
-        /* Flex adjustments for conversion block to prevent wrapping too early */
-        #field-settings > .field-card > div:nth-child(5) { /* Targeting the conversion block specifically */
-            flex-wrap: wrap; /* Allow wrapping if space is tight */
-            flex-grow: 2; /* Allow it to take more space */
+        /* --- Utility Styles --- */
+        #copy-button {
+            padding: 10px 20px;
+            background-color: #03dac6;
+            color: #121212;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: background-color 0.2s;
         }
-        #field-settings > .field-card > div:nth-child(5) .input-group {
-            min-width: 120px; /* Smaller min-width for units in conversion block */
+        #copy-button:hover {
+            background-color: #03a89a;
+        }
+
+        .font-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        #font-selector {
+            padding: 8px;
+            border: 1px solid #626262;
+            border-radius: 4px;
+            background-color: #4a4a4a;
+            color: #e0e0e0;
+            font-family: var(--site-font);
+        }
+        .font-input-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+            flex-grow: 1;
         }
     </style>
 </head>
@@ -142,123 +238,288 @@
 
     <div class="container">
         <h1>🌪️ Dynamic Template Generator</h1>
+        
+        <div class="font-controls">
+            <div class="font-input-group">
+                <label for="font-selector" style="font-weight: bold;">Select Font:</label>
+                <select id="font-selector" onchange="changeFont(this.value)">
+                    <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI (Default)</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="'Times New Roman', serif">Times New Roman</option>
+                    <option value="'Courier New', monospace">Courier New</option>
+                    <option value="'Roboto Mono', monospace">Roboto Mono (Monospace)</option>
+                    <option value="'Open Sans', sans-serif">Open Sans</option>
+                    <option value="Verdana, sans-serif">Verdana</option>
+                    <option value="CustomFontFamily">Custom (See Below)</option>
+                </select>
+            </div>
+            
+            <div class="font-input-group">
+                <label for="custom-font-url" style="font-weight: bold;">Custom Font URL (e.g., Google Fonts @import)</label>
+                <textarea id="custom-font-url" placeholder="e.g., https://fonts.googleapis.com/css2?family=..." oninput="saveCustomFontSettings()" class="resizable-textarea"></textarea>
+            </div>
+            
+            <div class="font-input-group">
+                <label for="custom-font-name" style="font-weight: bold;">Custom Font Family Name</label>
+                <textarea id="custom-font-name" placeholder="e.g., 'Roboto Mono'" oninput="saveCustomFontSettings()" class="resizable-textarea"></textarea>
+            </div>
+        </div>
 
         <div class="section-header">1. Define Your Template (Use **\_\_** for editable fields)</div>
-        <textarea id="template-input" placeholder="Enter your template here. Example:&#10;Tropical Storm Andaya Advisory #__&#10;Strength: __ knots (Convert to kph) kph&#10;Pressure: __ hPa&#10;Direction: __">
-Tropical Storm Andaya Advisory #__
-Strength: __ knots (Convert to kph) kph
-Pressure: __ hPa
-Direction: __
-        </textarea>
+        <textarea id="template-input" placeholder="Tropical Storm Andaya Advisory #__&#10;Strength: __ knots (Convert to kph) kph&#10;Pressure: __ hPa&#10;Direction: __"></textarea>
         
         <div class="section-header">2. Field Settings and Inputs</div>
         <p style="font-size: 0.9em;">
-            Configure field names, input values, and set up conversions.
+            Configure field names, input values, and set up conversions. All editable text areas are now fully resizable.
         </p>
         <div id="field-settings">
             </div>
 
         <div class="section-header">3. Generated Text</div>
         <textarea id="output-textarea" readonly></textarea>
+        <button id="copy-button" onclick="copyOutput()">📋 Copy Generated Text</button>
 
     </div>
 
     <script>
-        const TEMPLATE_DELIMITER = '__'; // Double underscore for a field
+        const TEMPLATE_DELIMITER = '__';
+        const STORAGE_KEY = 'templateAppProgressV8'; 
+        const FONT_STORAGE_KEY = 'templateAppFontV7';
+        const CUSTOM_FONT_STORAGE_KEY = 'templateAppCustomFontV7';
         
-        // Conversion factors (to/from a base unit, e.g., MPH)
+        const DEFAULT_TEMPLATE = 'Tropical Storm Andaya Advisory #__\nStrength: __ knots (Convert to kph) kph\nPressure: __ hPa\nDirection: __';
+
         const CONVERSION_FACTORS = {
-            'mph': 1.0,               // Base unit: Miles per hour
-            'kph': 1.60934,           // 1 mph = 1.60934 kph
-            'knots': 0.868976,        // 1 mph = 0.868976 knots
+            'mph': 1.0,
+            'kph': 1.60934,
+            'knots': 0.868976,
         };
 
         const templateInput = document.getElementById('template-input');
         const fieldSettingsDiv = document.getElementById('field-settings');
         const outputTextarea = document.getElementById('output-textarea');
+        const fontSelector = document.getElementById('font-selector');
+        const customFontUrlInput = document.getElementById('custom-font-url');
+        const customFontNameInput = document.getElementById('custom-font-name');
 
-        // Global array to store field metadata (Name, Value, Conversion Settings)
         let fields = [];
+        let lastActiveElementId = null;
 
-        // --- CORE CONVERSION LOGIC ---
+        // --- CUSTOMIZATION & UTILITIES ---
+
+        // Function to change the site font (applies site-wide)
+        function changeFont(fontValue) {
+            const finalFont = fontValue === 'CustomFontFamily' && customFontNameInput.value 
+                ? customFontNameInput.value 
+                : fontValue;
+                
+            // Set the CSS variable used by all elements
+            document.documentElement.style.setProperty('--site-font', finalFont);
+            localStorage.setItem(FONT_STORAGE_KEY, fontValue);
+        }
+        
+        // Load custom font dynamically
+        function loadCustomFont(url) {
+            let oldLink = document.getElementById('custom-font-link');
+            let oldStyle = document.getElementById('custom-font-style');
+            if (oldLink) oldLink.remove();
+            if (oldStyle) oldStyle.remove();
+
+            if (url) {
+                if (url.startsWith('http')) {
+                    let link = document.createElement('link');
+                    link.id = 'custom-font-link';
+                    link.rel = 'stylesheet';
+                    link.href = url;
+                    document.head.appendChild(link);
+                } else if (url.startsWith('@import')) {
+                    let style = document.createElement('style');
+                    style.id = 'custom-font-style';
+                    style.textContent = url;
+                    document.head.appendChild(style);
+                }
+            }
+        }
+        
+        // Save and apply custom font settings
+        function saveCustomFontSettings() {
+            const customSettings = {
+                url: customFontUrlInput.value,
+                name: customFontNameInput.value
+            };
+            localStorage.setItem(CUSTOM_FONT_STORAGE_KEY, JSON.stringify(customSettings));
+            loadCustomFont(customSettings.url);
+            
+            if (fontSelector.value === 'CustomFontFamily') {
+                changeFont('CustomFontFamily');
+            }
+            saveState();
+        }
+
+        // Function to handle the Copy button click
+        function copyOutput() {
+            outputTextarea.select();
+            document.execCommand('copy');
+            const originalText = document.getElementById('copy-button').textContent;
+            document.getElementById('copy-button').textContent = '✅ Copied!';
+            setTimeout(() => {
+                document.getElementById('copy-button').textContent = originalText;
+            }, 1500);
+        }
+
+        // --- PERSISTENCE (Save/Load) ---
+
+        // Save state to Local Storage
+        function saveState() {
+            const state = {
+                template: templateInput.value,
+                fields: fields,
+                lastActiveElementId: lastActiveElementId 
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        // Load state from Local Storage
+        function loadState() {
+            // Load Custom Font Settings
+            const savedCustomFont = localStorage.getItem(CUSTOM_FONT_STORAGE_KEY);
+            if (savedCustomFont) {
+                const customSettings = JSON.parse(savedCustomFont);
+                customFontUrlInput.value = customSettings.url || '';
+                customFontNameInput.value = customSettings.name || '';
+                loadCustomFont(customSettings.url);
+            }
+            
+            // Load Font Selector Value
+            const savedFont = localStorage.getItem(FONT_STORAGE_KEY);
+            if (savedFont) {
+                fontSelector.value = savedFont; 
+                changeFont(savedFont);
+            } else {
+                changeFont(fontSelector.value);
+            }
+            
+            // Load Template/Fields
+            const savedState = localStorage.getItem(STORAGE_KEY);
+            if (savedState) {
+                const state = JSON.parse(savedState);
+                templateInput.value = state.template || '';
+                fields = state.fields || [];
+                lastActiveElementId = state.lastActiveElementId || null;
+            } else {
+                 // ONLY set default template if no state is found
+                templateInput.value = DEFAULT_TEMPLATE;
+            }
+            
+            generateFieldCards(); 
+            window.addEventListener('load', restoreFocus);
+        }
+        
+        // --- FOCUS RETENTION ---
+
+        document.addEventListener('focusin', (event) => {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.tagName === 'SELECT') {
+                lastActiveElementId = event.target.id;
+                saveState();
+            }
+        });
+
+        function restoreFocus() {
+             if (lastActiveElementId) {
+                const lastActiveElement = document.getElementById(lastActiveElementId);
+                if (lastActiveElement && document.activeElement !== lastActiveElement) {
+                    lastActiveElement.focus();
+                    if (lastActiveElement.setSelectionRange) {
+                        const len = lastActiveElement.value.length;
+                        lastActiveElement.setSelectionRange(len, len);
+                    }
+                }
+            }
+        }
+        window.addEventListener('focus', restoreFocus);
+
+
+        // --- CORE LOGIC ---
+
         function convertSpeed(value, fromUnit, toUnit) {
             value = parseFloat(value);
-            if (isNaN(value) || value === 0) return 0;
+            if (isNaN(value)) return 0; // Return 0, not value, if input is invalid
             
             fromUnit = fromUnit.toLowerCase();
             toUnit = toUnit.toLowerCase();
 
-            if (!CONVERSION_FACTORS[fromUnit] || !CONVERSION_FACTORS[toUnit]) {
-                console.error("Unknown unit encountered during conversion.");
-                return value; // Return original value if units are invalid
-            }
+            if (!CONVERSION_FACTORS[fromUnit] || !CONVERSION_FACTORS[toUnit]) return value.toFixed(1); // Keep original if units are unknown
 
-            // 1. Convert value to the base unit (MPH)
             let baseValue = value / CONVERSION_FACTORS[fromUnit];
-            
-            // 2. Convert from base unit (MPH) to the target unit
             let convertedValue = baseValue * CONVERSION_FACTORS[toUnit];
             
-            return convertedValue.toFixed(1); // Return to one decimal place
+            return convertedValue.toFixed(1);
         }
 
-        // --- 1. FIELD GENERATION ---
         function generateFieldCards() {
             const template = templateInput.value;
-            const matches = template.match(new RegExp(TEMPLATE_DELIMITER, 'g'));
-            const fieldCount = matches ? matches.length : 0;
+            // Use a regex to find all occurrences of the TEMPLATE_DELIMITER (e.g., __)
+            const matches = [...template.matchAll(new RegExp(TEMPLATE_DELIMITER, 'g'))];
+            const fieldCount = matches.length;
             
             let newFields = [];
             
             for (let i = 0; i < fieldCount; i++) {
-                // If a field already exists, keep its previous settings
                 let existingField = fields[i];
                 if (existingField) {
+                    existingField.id = `field-${i}`;
                     newFields.push(existingField);
-                    continue;
+                } else {
+                    newFields.push({
+                        id: `field-${i}`,
+                        name: `Field ${i + 1}`,
+                        value: '',
+                        isConverter: false,
+                        fromUnit: 'knots',
+                        toUnit: 'kph',
+                        conversionText: '',
+                    });
                 }
-
-                // Default settings for new fields
-                newFields.push({
-                    id: `field-${i}`,
-                    name: `Field ${i + 1}`,
-                    value: '',
-                    isConverter: false,
-                    fromUnit: 'knots', // Default from unit
-                    toUnit: 'kph',     // Default to unit
-                    conversionText: '', // The static text in the template to replace
-                });
             }
 
             fields = newFields;
             renderFieldSettings();
-            updateOutput(); // Refresh output
+            updateOutput();
+            saveState();
         }
 
-        // --- 2. FIELD RENDERING ---
         function renderFieldSettings() {
             let html = '';
             
             fields.forEach((field, index) => {
                 const isConverterChecked = field.isConverter ? 'checked' : '';
                 const conversionBlockStyle = field.isConverter ? 'style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;"' : 'style="display: none;"';
+                const placeholderText = field.name;
+                
+                // Get the current value for the name/value textareas
+                const fieldNameValue = field.name || '';
+                const fieldInputValue = field.value || '';
 
                 html += `
                     <div class="field-card" data-index="${index}">
-                        <label>Configuration for Placeholder ${index + 1}:</label>
+                        <label>Configuration for Placeholder ${index + 1}: ${fieldNameValue}</label>
                         
-                        <div class="input-group">
-                            <span>Field Name</span>
-                            <input type="text" id="${field.id}-name" value="${field.name}" 
-                                oninput="updateFieldName(${index}, this.value)">
+                        <div class="field-name-group">
+                            <span class="field-label">Field Name</span>
+                            <textarea id="${field.id}-name" 
+                                oninput="updateFieldName(${index}, this.value)" placeholder="e.g., Advisory Number" class="resizable-textarea">${fieldNameValue}</textarea>
                         </div>
 
-                        <div class="input-group">
-                            <span>Input Value</span>
-                            <input type="${field.isConverter ? 'number' : 'text'}" id="${field.id}-value" value="${field.value}" 
-                                oninput="updateFieldValue(${index}, this.value)">
+                        <div class="input-value-group">
+                            <span class="field-label">Input Value</span>
+                            ${field.isConverter 
+                                ? `<input type="number" id="${field.id}-value" value="${fieldInputValue}" 
+                                    oninput="updateFieldValue(${index}, this.value)" placeholder="${placeholderText}">`
+                                : `<textarea id="${field.id}-value" 
+                                    oninput="updateFieldValue(${index}, this.value)" placeholder="${placeholderText}" class="resizable-textarea">${fieldInputValue}</textarea>`
+                            }
                         </div>
-
+                        
                         <div class="input-group">
                             <span>Converter?</span>
                             <input type="checkbox" id="${field.id}-converter" ${isConverterChecked} 
@@ -286,8 +547,8 @@ Direction: __
                             
                             <div class="input-group">
                                 <span>Text to Replace (e.g., (Convert to kph))</span>
-                                <input type="text" id="${field.id}-text" value="${field.conversionText}" 
-                                    oninput="updateConversionSettings(${index})">
+                                <textarea id="${field.id}-text" 
+                                    oninput="updateConversionSettings(${index})" placeholder="Text to replace" class="resizable-textarea">${field.conversionText}</textarea>
                             </div>
 
                             <div class="converter-display" id="${field.id}-converted-output">
@@ -301,25 +562,29 @@ Direction: __
             fieldSettingsDiv.innerHTML = html;
         }
 
-        // --- 3. FIELD DATA HANDLERS ---
         function updateFieldName(index, name) {
             fields[index].name = name;
-            // Update the label directly without full re-render for efficiency
+            // Update placeholder for the corresponding value input/textarea
+            const valueInput = document.getElementById(`${fields[index].id}-value`);
+            if (valueInput) valueInput.placeholder = name;
+            
             const card = document.querySelector(`.field-card[data-index="${index}"]`);
             if (card) {
                 card.querySelector('label').textContent = `Configuration for Placeholder ${index + 1}: ${name}`;
             }
+            saveState();
         }
         
         function updateFieldValue(index, value) {
             fields[index].value = value;
             updateOutput();
+            saveState();
         }
 
         function toggleConverter(index, isChecked) {
             fields[index].isConverter = isChecked;
-            // Re-render to show/hide conversion settings and change input type
             renderFieldSettings(); 
+            saveState();
         }
 
         function updateConversionSettings(index) {
@@ -332,54 +597,53 @@ Direction: __
                 field.conversionText = card.querySelector(`#${field.id}-text`).value;
             }
             updateOutput();
+            saveState();
         }
 
-
-        // --- 4. TEMPLATE PROCESSING AND OUTPUT ---
         function updateOutput() {
             let template = templateInput.value;
-            let finalOutput = template; // Start with the full template
+            let finalOutput = template;
 
-            // Iterate over fields in reverse order to avoid issues with replaceAll and overlapping delimiters
-            // This is a common pattern when dealing with multiple string replacements of the same substring
-            let currentTemplateParts = finalOutput.split(TEMPLATE_DELIMITER);
-            let outputParts = [];
+            // 1. Replace the actual placeholders (the __) with the field values
+            let fieldIndex = 0;
+            finalOutput = finalOutput.replace(new RegExp(TEMPLATE_DELIMITER, 'g'), () => {
+                const value = fields[fieldIndex]?.value || '';
+                fieldIndex++;
+                // If value is empty, replace it with an empty string, NOT the placeholder itself
+                return value; 
+            });
 
-            // Process each part and insert the corresponding field value
-            for (let i = 0; i < currentTemplateParts.length; i++) {
-                outputParts.push(currentTemplateParts[i]);
-                if (i < fields.length) {
-                    outputParts.push(fields[i].value);
-                }
-            }
-            finalOutput = outputParts.join('');
-
-
-            // Now handle conversions within the constructed string
+            // 2. Perform conversion and text replacement for converter fields
             fields.forEach(field => {
                 if (field.isConverter) {
-                    const convertedValue = convertSpeed(field.value, field.fromUnit, field.toUnit);
+                    // Convert speed, defaulting to 0 if input value is empty or invalid
+                    const valueToConvert = field.value || '0'; 
+                    const convertedValue = convertSpeed(valueToConvert, field.fromUnit, field.toUnit);
 
-                    // Update the display in the GUI for the converter field
+                    // Update the display for the converted value
                     const converterDisplay = document.getElementById(`${field.id}-converted-output`);
                     if (converterDisplay) {
                         converterDisplay.textContent = `${convertedValue} ${field.toUnit.toUpperCase()}`;
                     }
 
-                    // Replace the specified conversion text in the finalOutput string
-                    if (field.conversionText && finalOutput.includes(field.conversionText)) {
-                        finalOutput = finalOutput.replace(field.conversionText, convertedValue);
+                    // Replace the conversion text (e.g., "(Convert to kph)") in the final output
+                    // IMPORTANT: We use the value from the *template* before the first replace, but we 
+                    // must replace it in the *finalOutput* after the first replacement pass.
+                    if (field.conversionText) {
+                        // Use a global replace to catch all instances if somehow duplicated
+                        // Escape any special regex characters in the conversionText
+                        const escapedText = field.conversionText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        finalOutput = finalOutput.replace(new RegExp(escapedText, 'g'), convertedValue);
                     }
                 }
             });
 
-            // Set the final text to the output area
             outputTextarea.value = finalOutput;
         }
 
         // --- INITIALIZATION ---
         templateInput.addEventListener('input', generateFieldCards);
-        window.addEventListener('load', generateFieldCards); // Initial generation on page load
+        window.addEventListener('load', loadState);
     </script>
 
 </body>
